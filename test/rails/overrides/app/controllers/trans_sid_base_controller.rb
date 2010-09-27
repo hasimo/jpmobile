@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 class TransSidBaseController < ApplicationController
   # 事前にセッションを作成しないと trans_sid が有効にならない
-  before_filter :session_init
+  before_filter :session_init,:user_init
 
   def form
     render :inline=>%{<%= form_tag do %>Hello<% end %>}
@@ -12,9 +12,13 @@ class TransSidBaseController < ApplicationController
   def redirect
     redirect_to('/')
   end
+
+  def user_init 
+    @user = User.find(1) rescue User.create(:id => 1, :name => "everyleaf")
+  end
+  
   def session_init
     session[:jpmobile] = "everyleaf"
-    @user = User.find(1) rescue User.create(:id => 1, :name => "everyleaf")
   end
 
   def form_path

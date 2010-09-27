@@ -166,7 +166,7 @@ describe "trans_sid functional" do
 
       res.controller.trans_sid_mode.should == :always
     end
-    it_should_behave_like "trans_sid が起動しないとき"
+    it_should_behave_like "trans_sid が起動するとき"
   end
 
   # NOTE: 3.0.0RC では accept-charset は UTF-8 で埋め込まれるので保留

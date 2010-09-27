@@ -98,6 +98,11 @@ module Jpmobile::TransSid #:nodoc:
     controller.after_filter(:append_session_id_parameter)
   end
 
+  def reset_session
+    super 
+    request.session_options[:id] ||= request.session_options.instance_variable_get('@by').send(:generate_sid)  rescue nil 
+  end
+
   protected
   # URLにsession_idを追加する。
   def default_url_options
@@ -115,10 +120,14 @@ module Jpmobile::TransSid #:nodoc:
     end
     key
   end
+
   # session_idを返す
   def jpmobile_session_id
-    request.session_options[:id] rescue session.session_id
+    session_id = request.session_options[:id] rescue session.session_id
+    return session_id unless  session_id.blank?
+    request.session_options[:id] ||= request.session_options.instance_variable_get('@by').send(:generate_sid)  rescue nil 
   end
+
   # session_idを埋め込むためのhidden fieldを出力する。
   def sid_hidden_field_tag
     "<input type=\"hidden\" name=\"#{CGI::escapeHTML session_key}\" value=\"#{CGI::escapeHTML jpmobile_session_id}\" />"
