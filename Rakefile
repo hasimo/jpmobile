@@ -5,6 +5,7 @@ require 'rake/testtask'
 require 'rake/rdoctask'
 require 'fileutils'
 require 'pathname'
+require 'git'
 include FileUtils
 
 begin
