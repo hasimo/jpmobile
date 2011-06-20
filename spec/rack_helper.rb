@@ -4,7 +4,9 @@ require 'rack/test'
 require 'rspec'
 require 'jpmobile'
 require 'jpmobile/rack'
+require 'nkf'
 require 'pp' # for debug
+
 begin
   require File.dirname(__FILE__)+'/../vendor/jpmobile-ipaddresses/lib/jpmobile-ipaddresses'
 rescue LoadError
@@ -17,15 +19,14 @@ rescue LoadError
 end
 
 RSpec.configure do |config|
-  config.include Rack::Test::Methods
+  config.filter_run :focus => true
+  config.run_all_when_everything_filtered = true
+  config.color_enabled = true
 end
 
 class UnitApplication
   def initialize(body = nil)
-    @body = body || "Body"
-    if @body.respond_to?(:force_encoding)
-      @body.force_encoding("UTF-8")
-    end
+    @body = Jpmobile::Util.utf8(body || "Body")
   end
 
   def call(env)
@@ -51,10 +52,7 @@ end
 class RenderParamApp
   def call(env)
     request = Rack::Request.new(env)
-    q = request.params['q']
-    if q.respond_to?(:force_encoding)
-      q.force_encoding("UTF-8")
-    end
+    q = Jpmobile::Util.utf8(request.params['q'])
 
     [200, env, q]
   end

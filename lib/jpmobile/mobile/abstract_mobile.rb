@@ -4,6 +4,9 @@ require 'ipaddr'
 module Jpmobile::Mobile
   # 携帯電話の抽象クラス。
   class AbstractMobile
+    # メールのデフォルトのcharset
+    MAIL_CHARSET = "ISO-2022-JP"
+
     def initialize(env, request)
       @env     = env
       @request = request
@@ -65,6 +68,72 @@ module Jpmobile::Mobile
     def default_charset
       "UTF-8"
     end
+
+    # for view selector
+    def variants
+      return @_variants if @_variants
+
+      @_variants = self.class.ancestors.select {|c| c.to_s =~ /^Jpmobile/}.map do |klass|
+        klass = klass.to_s.
+          gsub(/Jpmobile::/, '').
+          gsub(/AbstractMobile::/, '').
+          gsub(/Mobile::SmartPhone/, 'smart_phone').
+          gsub(/::/, '_').
+          gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').
+          gsub(/([a-z\d])([A-Z])/, '\1_\2').
+          downcase
+        klass =~ /abstract/ ? "mobile" : klass
+      end
+
+      if @_variants.include?("smart_phone")
+        @_variants = @_variants.reject{|v| v == "mobile"}.map{|v| v.gsub(/mobile/, "smart_phone")}
+      end
+
+      @_variants
+    end
+
+    # メール送信用
+    def to_mail_subject(str)
+      Jpmobile::Util.fold_text(Jpmobile::Emoticon.unicodecr_to_utf8(str)).
+        map{|text| "=?#{mail_charset}?B?" + [to_mail_encoding(text)].pack('m').strip + "?=" }.
+        join("\n\s")
+    end
+    def to_mail_body(str)
+      to_mail_encoding(str)
+    end
+    def mail_charset(charset = nil)
+      (charset.nil? or charset == "") ? self.class::MAIL_CHARSET : charset
+    end
+    def to_mail_encoding(str)
+      str = Jpmobile::Emoticon.utf8_to_unicodecr(str)
+      str = Jpmobile::Emoticon.unicodecr_to_external(str, Jpmobile::Emoticon::CONVERSION_TABLE_TO_PC_EMAIL, false)
+      Jpmobile::Util.encode(str, mail_charset)
+    end
+    def utf8_to_mail_encode(str)
+      case mail_charset
+      when /ISO-2022-JP/i
+        Jpmobile::Util.utf8_to_jis(str)
+      when /Shift_JIS/i
+        Jpmobile::Util.utf8_to_sjis(str)
+      else
+        str
+      end
+    end
+    def to_mail_internal(str, charset)
+      str
+    end
+    def to_mail_subject_encoded?(str)
+      str.match(/\=\?#{mail_charset}\?B.+\?\=/i)
+    end
+    def to_mail_body_encoded?(str)
+      Jpmobile::Util.jis?(str)
+    end
+    def decode_transfer_encoding(body, charset)
+      body = Jpmobile::Util.set_encoding(body, charset)
+      body = to_mail_internal(body, nil)
+      Jpmobile::Util.force_encode(body, charset, Jpmobile::Util::UTF8)
+    end
+
     # リクエストがこのクラスに属するか調べる
     # メソッド名に関して非常に不安
     def self.check_carrier(env)

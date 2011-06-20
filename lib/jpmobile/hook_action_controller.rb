@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
-module AbstractController
-  module ViewPaths
-    def lookup_context_with_jpmobile
-      jpmobile_context = lookup_context_without_jpmobile
-      jpmobile_context.view_paths.controller = self
-
-      jpmobile_context
-    end
-
-    alias_method_chain :lookup_context, :jpmobile
-  end
-end
+require 'jpmobile/lookup_context'
 
 module ActionController
   class Base
@@ -27,5 +16,3 @@ module ActionController
     end
   end
 end
-
-ActionController::Request.send :include, Jpmobile::Encoding

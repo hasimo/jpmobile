@@ -7,7 +7,9 @@ module Jpmobile::Mobile
     # 対応するUser-Agentの正規表現
     USER_AGENT_REGEXP = /^DoCoMo/
     # 対応するメールアドレスの正規表現
-    MAIL_ADDRESS_REGEXP = /^.+@docomo\.ne\.jp$/
+    MAIL_ADDRESS_REGEXP = /.+@docomo\.ne\.jp/
+    # メールのデフォルトのcharset
+    MAIL_CHARSET = "Shift_JIS"
 
     # オープンiエリアがあればエリアコードを +String+ で返す。無ければ +nil+ を返す。
     def areacode
@@ -92,6 +94,25 @@ module Jpmobile::Mobile
     end
     def default_charset
       "Shift_JIS"
+    end
+
+    # メール送信用
+    def to_mail_body(str)
+      to_external(str, nil, nil).first
+    end
+    def to_mail_encoding(str)
+      to_external(str, nil, nil).first
+    end
+    def to_mail_internal(str, charset)
+      if Jpmobile::Util.shift_jis?(str) or Jpmobile::Util.ascii_8bit?(str) or charset == mail_charset
+        # 絵文字を数値参照に変換
+        str = Jpmobile::Emoticon.external_to_unicodecr_docomo(Jpmobile::Util.sjis(str))
+      end
+
+      str
+    end
+    def to_mail_body_encoded?(str)
+      Jpmobile::Util.shift_jis?(str)
     end
 
     # i-mode ブラウザのバージョンを返す。

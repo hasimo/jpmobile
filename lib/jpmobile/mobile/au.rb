@@ -9,7 +9,7 @@ module Jpmobile::Mobile
     # User-Agent文字列中に "UP.Browser" を含むVodafoneの端末があるので注意が必要
     USER_AGENT_REGEXP = /^(?:KDDI|UP.Browser\/.+?)-(.+?) /
     # 対応するメールアドレスの正規表現
-    MAIL_ADDRESS_REGEXP = /^.+@ezweb\.ne\.jp$/
+    MAIL_ADDRESS_REGEXP = /.+@ezweb\.ne\.jp/
     # 簡易位置情報取得に対応していないデバイスID
     # http://www.au.kddi.com/ezfactory/tec/spec/eznavi.html
     LOCATION_UNSUPPORTED_DEVICE_ID = ["PT21", "TS25", "KCTE", "TST9", "KCU1", "SYT5", "KCTD", "TST8", "TST7", "KCTC", "SYT4", "KCTB", "KCTA", "TST6", "KCT9", "TST5", "TST4", "KCT8", "SYT3", "KCT7", "MIT1", "MAT3", "KCT6", "TST3", "KCT5", "KCT4", "SYT2", "MAT1", "MAT2", "TST2", "KCT3", "KCT2", "KCT1", "TST1", "SYT1"]
@@ -86,7 +86,6 @@ module Jpmobile::Mobile
       str = Jpmobile::Util.sjis_to_utf8(str)
       # 数値参照を UTF-8 に変換
       Jpmobile::Emoticon::unicodecr_to_utf8(str)
-      # 半角->全角変換
     end
     def to_external(str, content_type, charset)
       # UTF-8を数値参照に
@@ -103,6 +102,27 @@ module Jpmobile::Mobile
     end
     def default_charset
       "Shift_JIS"
+    end
+
+    # メール送信用
+    def to_mail_body(str)
+      to_mail_encoding(str)
+    end
+
+    def to_mail_internal(str, charset)
+      if Jpmobile::Util.jis?(str) or Jpmobile::Util.ascii_8bit?(str) or charset == mail_charset
+        # 絵文字を数値参照に変換
+        str = Jpmobile::Emoticon.external_to_unicodecr_au_mail(Jpmobile::Util.jis(str))
+        str = Jpmobile::Util.jis_to_utf8(Jpmobile::Util.jis(str))
+      end
+      str
+    end
+
+    private
+    def to_mail_encoding(str)
+      str = Jpmobile::Emoticon.utf8_to_unicodecr(str)
+      str = Jpmobile::Util.utf8_to_jis(str)
+      Jpmobile::Util.jis(Jpmobile::Emoticon.unicodecr_to_au_email(str))
     end
   end
 end

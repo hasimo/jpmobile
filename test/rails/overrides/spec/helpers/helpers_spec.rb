@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-
-require File.dirname(__FILE__) + '/../spec_helper'
+require File.expand_path(File.join(File.dirname(__FILE__), '/../spec_helper'))
 
 describe Jpmobile::Helpers do
   include Jpmobile::Helpers
@@ -13,6 +12,6 @@ describe Jpmobile::Helpers do
   end
   it "softbank_location_link_to がリンク先にパラメータを含んでいても正常に動作すること" do
     # http://d.hatena.ne.jp/mizincogrammer/20090123/1232702067
-    softbank_location_link_to("STRING", :controller => "filter", :action => "rawdata", :p => "param").should == %{<a href="location:auto?url=http://test.host/filter/rawdata&p=param">STRING</a>}
+    softbank_location_link_to("STRING", :controller => "filter", :action => "rawdata", :p => "param").should == %{<a href="location:auto?url=http://test.host/filter/rawdata&amp;p=param">STRING</a>}
   end
 end

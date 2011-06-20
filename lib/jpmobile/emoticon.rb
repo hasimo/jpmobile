@@ -9,8 +9,13 @@ module Jpmobile
     %w( DOCOMO_SJIS_TO_UNICODE DOCOMO_UNICODE_TO_SJIS ).each do |const|
       autoload const, 'jpmobile/emoticon/docomo'
     end
-    autoload :AU_SJIS_TO_UNICODE,           'jpmobile/emoticon/au'
-    %w( SOFTBANK_UNICODE_TO_WEBCODE SOFTBANK_WEBCODE_TO_UNICODE ).each do |const|
+    %w( AU_SJIS_TO_UNICODE AU_UNICODE_TO_EMAILJIS AU_SJIS_TO_EMAIL_JIS AU_EMAILJIS_TO_UNICODE ).each do |const|
+      autoload const, 'jpmobile/emoticon/au'
+    end
+    %w(
+      SOFTBANK_UNICODE_TO_WEBCODE SOFTBANK_WEBCODE_TO_UNICODE
+      SOFTBANK_UNICODE_TO_SJIS SOFTBANK_SJIS_TO_UNICODE
+    ).each do |const|
       autoload const, 'jpmobile/emoticon/softbank'
     end
     %w( CONVERSION_TABLE_TO_DOCOMO CONVERSION_TABLE_TO_AU CONVERSION_TABLE_TO_SOFTBANK ).each do |const|
@@ -20,6 +25,7 @@ module Jpmobile
       SJIS_TO_UNICODE UNICODE_TO_SJIS
       SJIS_REGEXP SOFTBANK_WEBCODE_REGEXP DOCOMO_SJIS_REGEXP AU_SJIS_REGEXP SOFTBANK_UNICODE_REGEXP
       EMOTICON_UNICODES UTF8_REGEXP
+      CONVERSION_TABLE_TO_PC_EMAIL SOFTBANK_SJIS_REGEXP AU_EMAILJIS_REGEXP
     ).each do |const|
       autoload const, 'jpmobile/emoticon/z_combine'
     end
@@ -33,12 +39,24 @@ module Jpmobile
       end
     end
 
-    # +str+ のなかでDoCoMo絵文字をUnicode数値文字参照に置換した文字列を返す。
+    # +str+ のなかでau絵文字をUnicode数値文字参照に置換した文字列を返す。
     def self.external_to_unicodecr_au(str)
       str.gsub(AU_SJIS_REGEXP) do |match|
         sjis = match.unpack('n').first
         unicode = AU_SJIS_TO_UNICODE[sjis]
         unicode ? ("&#x%04x;"%unicode) : match
+      end
+    end
+
+    # +str+ のなかでau絵文字をUnicode数値文字参照に置換した文字列を返す。(メール専用)
+    def self.external_to_unicodecr_au_mail(in_str)
+      str = Jpmobile::Util.ascii_8bit(in_str)
+      str.gsub(Jpmobile::Util.jis_string_regexp) do |jis_string|
+        jis_string.gsub(/[\x21-\x7e]{2}/) do |match|
+          jis = match.unpack('n').first
+          unicode = AU_EMAILJIS_TO_UNICODE[jis]
+          unicode ? Jpmobile::Util.ascii_8bit("\x1b\x28\x42&#x%04x;\x1b\x24\x42"%unicode) : match
+        end
       end
     end
 
@@ -50,23 +68,16 @@ module Jpmobile
         "&#x%04x;" % (unicode+0x1000)
       end
     end
+    def self.external_to_unicodecr_softbank_sjis(str)
+      # SoftBank Shift_JIS
+      str.gsub(SOFTBANK_SJIS_REGEXP) do |match|
+        sjis = match.unpack('n').first
+        unicode = SOFTBANK_SJIS_TO_UNICODE[sjis]
+        "&#x%04x;" % (unicode+0x1000)
+      end
+    end
     def self.external_to_unicodecr_vodafone(str)
       external_to_unicodecr_softbank(str)
-    end
-    # +str+のなかでWebcodeのSoftBank絵文字を(+0x1000だけシフトして)Unicode数値文字参照に変換した文字列を返す。
-    def self.external_to_unicodecr_jphone(str)
-      # SoftBank Webcode
-      s = str.clone
-      # 連続したエスケープコードが省略されている場合は切りはなす。
-      s.gsub!(/\x1b\x24(.)(.+?)\x0f/) do |match|
-        a = $1
-        $2.split(//).map{|x| "\x1b\x24#{a}#{x}\x0f"}.join('')
-      end
-      # Webcodeを変換
-      s.gsub(SOFTBANK_WEBCODE_REGEXP) do |match|
-        unicode = SOFTBANK_WEBCODE_TO_UNICODE[match[2,2]] + 0x1000
-        unicode ? ("&#x%04x;"%unicode) : match
-      end
     end
 
     # +str+ のなかでUnicode数値文字参照で表記された絵文字を携帯側エンコーディングに置換する。
@@ -91,16 +102,15 @@ module Jpmobile
           # 変換先がUnicodeで指定されている。つまり対応する絵文字がある。
           if sjis = UNICODE_TO_SJIS[converted]
             if to_sjis
-              sjis_emotion = [sjis].pack('n')
-              if sjis_emotion.respond_to?(:force_encoding)
-                sjis_emotion.force_encoding("Shift_JIS")
-              end
-              sjis_emotion
+              sjis_emotion = Jpmobile::Util.sjis([sjis].pack('n'))
             else
               [converted].pack("U")
             end
           elsif webcode = SOFTBANK_UNICODE_TO_WEBCODE[converted-0x1000]
             [converted-0x1000].pack('U')
+          elsif converted == GETA
+            # PCで〓を表示する場合
+            [GETA].pack("U")
           else
             # キャリア変換テーブルに指定されていたUnicodeに対応する
             # 携帯側エンコーディングが見つからない(変換テーブルの不備の可能性あり)。
@@ -135,6 +145,60 @@ module Jpmobile
     def self.utf8_to_unicodecr(str)
       str.gsub(UTF8_REGEXP) do |match|
         "&#x%04x;" % match.unpack('U').first
+      end
+    end
+
+    # +str+ のなかでUnicode数値文字参照で表記された絵文字をメール送信用JISコードに変換する
+    # au 専用
+    def self.unicodecr_to_au_email(in_str)
+      str = Jpmobile::Util.ascii_8bit(in_str)
+      regexp = Regexp.compile(Jpmobile::Util.ascii_8bit("&#x([0-9a-f]{4});"), Regexp::IGNORECASE)
+      str.gsub(regexp) do |match|
+        unicode = $1.scanf("%x").first
+        converted = CONVERSION_TABLE_TO_AU[unicode]
+
+        # メール用エンコーディングに変換する
+        case converted
+        when Integer
+          if sjis = UNICODE_TO_SJIS[converted]
+            if email_jis = SJIS_TO_EMAIL_JIS[sjis]
+              Jpmobile::Util.ascii_8bit("\x1b\x24\x42#{[email_jis].pack('n')}\x1b\x28\x42")
+            else
+              Jpmobile::Util.ascii_8bit([sjis].pack('n'))
+            end
+          else
+            match
+          end
+        when String
+          # FIXME: 絵文字の代替が文章でいいかどうかの検証
+          Jpmobile::Util.ascii_8bit(Jpmobile::Util.utf8_to_jis(converted))
+        else
+          match
+        end
+      end
+    end
+
+    # +str+ のなかでUnicode数値文字参照で表記された絵文字をメール送信用JISコードに変換する
+    # softbank 専用
+    def self.unicodecr_to_softbank_email(str)
+      str.gsub(/&#x([0-9a-f]{4});/i) do |match|
+        unicode = $1.scanf("%x").first
+        converted = CONVERSION_TABLE_TO_SOFTBANK[unicode]
+
+        # メール用エンコーディングに変換する
+        case converted
+        when Integer
+          if sjis = SOFTBANK_UNICODE_TO_SJIS[converted-0x1000]
+            Jpmobile::Util.sjis([sjis].pack('n'))
+          else
+            match
+          end
+        when String
+          # FIXME: 絵文字の代替が文章でいいかどうかの検証
+          Jpmobile::Util.utf8_to_sjis(converted)
+        else
+          match
+        end
       end
     end
   end

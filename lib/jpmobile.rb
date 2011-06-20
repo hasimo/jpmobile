@@ -49,6 +49,9 @@ module Jpmobile
     autoload :Config,        'jpmobile/rack/config'
   end
   autoload :Configuration, 'jpmobile/rack'
+
+  autoload :Mailer,   'jpmobile/mailer'
+  autoload :Resolver, 'jpmobile/resolver'
 end
 
 if defined?(Rails)
