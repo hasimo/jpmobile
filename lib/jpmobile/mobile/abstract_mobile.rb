@@ -102,7 +102,8 @@ module Jpmobile::Mobile
       to_mail_encoding(str)
     end
     def mail_charset(charset = nil)
-      (charset.nil? or charset == "") ? self.class::MAIL_CHARSET : charset
+      # (charset.nil? or charset == "") ? self.class::MAIL_CHARSET : charset
+      self.class::MAIL_CHARSET
     end
     def to_mail_encoding(str)
       str = Jpmobile::Emoticon.utf8_to_unicodecr(str)
@@ -148,6 +149,18 @@ module Jpmobile::Mobile
       define_method "#{carrier.downcase}?" do
         self.is_a?(carrier_class)
       end
+    end
+
+    def self.carrier(env)
+      ::Jpmobile::Mobile.carriers.each do |const|
+        c = ::Jpmobile::Mobile.const_get(const)
+        if c.check_carrier(env)
+          res = ::Rack::Request.new(env)
+          return c.new(env, res)
+        end
+      end
+
+      nil
     end
 
     private

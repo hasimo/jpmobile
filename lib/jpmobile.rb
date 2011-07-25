@@ -3,14 +3,15 @@ $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) ||
                                           $:.include?(File.expand_path(File.dirname(__FILE__)))
 
 module Jpmobile
-  autoload :Email,             'jpmobile/email'
-  autoload :Emoticon,          'jpmobile/emoticon'
-  autoload :Position,          'jpmobile/position'
-  autoload :RequestWithMobile, 'jpmobile/request_with_mobile'
-  autoload :Util,              'jpmobile/util'
-  autoload :Encoding,          'jpmobile/encoding'
-  autoload :Version,           'jpmobile/version'
-  autoload :DatumConv,         'jpmobile/datum_conv'
+  autoload :Email,                    'jpmobile/email'
+  autoload :Emoticon,                 'jpmobile/emoticon'
+  autoload :Position,                 'jpmobile/position'
+  autoload :RequestWithMobile,        'jpmobile/request_with_mobile'
+  autoload :RequestWithMobileTesting, 'jpmobile/request_with_mobile'
+  autoload :Util,                     'jpmobile/util'
+  autoload :Encoding,                 'jpmobile/encoding'
+  autoload :Version,                  'jpmobile/version'
+  autoload :DatumConv,                'jpmobile/datum_conv'
 
   # autoload mobile classes
   module Mobile
@@ -46,7 +47,6 @@ module Jpmobile
     autoload :MobileCarrier, 'jpmobile/rack/mobile_carrier'
     autoload :ParamsFilter,  'jpmobile/rack/params_filter'
     autoload :Filter,        'jpmobile/rack/filter'
-    autoload :Config,        'jpmobile/rack/config'
   end
   autoload :Configuration, 'jpmobile/rack'
 
